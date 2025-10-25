@@ -1,0 +1,11 @@
+
+# Demo script showing variable assignment and named entities
+enemy1 = createEntity Enemy1
+print Created enemy id: $enemy1
+addTransform $enemy1 5.0 0.0 0.0
+# create another entity and store in var
+e2 = createEntity Enemy2
+print Created second enemy id: $e2
+# lookup by name
+idlookup = getEntityByName Enemy1
+print Lookup by name Enemy1 = $idlookup

@@ -1,0 +1,4 @@
+Visual Studio notes:
+- Use CMake -> Open -> CMakeLists.txt to load presets in VS2022.
+- Configure 'vs2022-x64-release' preset then build 'ALL_BUILD' or specific targets.
+- If linking errors occur, ensure thirdparty/prebuilt contains required .lib/.dll and include/ headers.

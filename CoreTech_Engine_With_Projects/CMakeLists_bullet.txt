@@ -1,0 +1,99 @@
+# Add to your existing CMakeLists.txt (append sources and link to Bullet)
+#
+# Find Bullet (system package)
+find_package(Bullet REQUIRED)
+if(BULLET_FOUND)
+    message(STATUS "Bullet found. Linking Bullet libraries.")
+    include_directories(${BULLET_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} ${BULLET_LIBRARIES})
+else()
+    message(WARNING "Bullet not found. Please install libbullet-dev or build Bullet from source.")
+endif()
+#
+# Also add the new source files to your project:
+# src/PhysicsManager.cpp
+# src/PhysicsComponent.cpp
+#
+# And include path already contains include/.
+
+list(APPEND SOURCES src/GameplayPCGManager.cpp)
+list(APPEND SOURCES src/PCGManager.cpp)
+list(APPEND SOURCES demo/scene_gameplay.cpp)
+
+add_definitions(-DCORE_TECH_NAME=\"Core Tech\")
+
+list(APPEND SOURCES src/NavMesh.cpp src/PickupManager.cpp src/DebugUI.cpp)
+
+add_definitions(-DIMGUI_ENABLED)
+
+list(APPEND SOURCES src/main.cpp)
+
+# include minimal imgui stub
+list(APPEND SOURCES third_party/imgui/imgui_single.cpp)
+include_directories(${CMAKE_SOURCE_DIR}/third_party/imgui)
+
+# Audio manager and miniaudio stub
+list(APPEND SOURCES src/AudioManager.cpp third_party/miniaudio/imgui_single.cpp)
+include_directories(${CMAKE_SOURCE_DIR}/third_party/miniaudio)
+
+list(APPEND SOURCES src/Renderer.cpp)
+
+# Include HLSL shader files in package
+set(HLSL_FILES shaders/hlsl/BlinnPhong.hlsl shaders/hlsl/PBR.hlsl)
+list(APPEND SOURCES ${HLSL_FILES})
+
+# Windows DirectX renderer
+if (WIN32)
+    list(APPEND SOURCES src/DirectXRenderer.cpp)
+    # Link against DirectX libraries
+    set(EXTRA_LIBS d3d11 D3DCompiler)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${EXTRA_LIBS})
+endif()
+
+
+# OpenGL renderer (uses GLFW + GLAD) - you must install and link GLFW and GLAD in your environment
+list(APPEND SOURCES src/RendererGL.cpp)
+# To build: link against glfw and include glad sources. Example on Linux: find_package(PkgConfig REQUIRED) pkg_search_module(GLFW REQUIRED glfw3)
+# Then include_directories(${GLFW_INCLUDE_DIRS}) and link_libraries(${GLFW_LIBRARIES})
+
+list(APPEND SOURCES src/ConfigLoader.cpp)
+
+if(WIN32)
+    list(APPEND SOURCES src/LauncherWin32.cpp)
+endif()
+
+# ImGui launcher (uses third_party/imgui/imgui_single stub or real Dear ImGui if replaced)
+list(APPEND SOURCES src/LauncherImGui.cpp third_party/imgui/imgui_single.cpp)
+include_directories(${CMAKE_SOURCE_DIR}/third_party/imgui)
+
+list(APPEND SOURCES src/VisualScripting.cpp)
+add_executable(vs_editor tools/visual_scripting_editor/create_demo_graph.cpp)
+
+# Visual Scripting sources
+list(APPEND SOURCES src/VisualScripting.cpp src/VisualScriptingNodes.cpp src/VSEditorImGui.cpp)
+# Tools
+add_executable(vs_editor tools/visual_scripting_editor/create_demo_graph.cpp)
+add_executable(vs_test tools/visual_scripting_editor/vs_test.cpp)
+
+list(APPEND SOURCES src/EditorInspector.cpp)
+
+
+# Optional GUI integration (ImGui + GLFW + GLAD)
+# To enable full ImGui editor, provide Dear ImGui, GLFW, and GLAD sources in third_party/ or system packages.
+option(ENABLE_IMGUI "Enable ImGui-based editor and tools" OFF)
+if(ENABLE_IMGUI)
+    message(STATUS "Building with ImGui support (ensure Dear ImGui, GLFW, GLAD are available)")
+    # Expect third_party/imgui, third_party/glfw, third_party/glad or system packages
+    include_directories(${CMAKE_SOURCE_DIR}/third_party/imgui)
+    include_directories(${CMAKE_SOURCE_DIR}/third_party/glfw/include)
+    include_directories(${CMAKE_SOURCE_DIR}/third_party/glad/include)
+    # Add ImGui + backend sources manually if present (not included by default in this repo).
+    # For example: list(APPEND SOURCES third_party/imgui/imgui.cpp third_party/imgui/backends/imgui_impl_glfw.cpp third_party/imgui/backends/imgui_impl_opengl3.cpp third_party/glad/src/glad.c)
+endif()
+
+
+# Added by assistant: OpenAL audio backend
+add_subdirectory(src/audio_openal)
+
+add_executable(play_sound_demo demo/play_sound_demo.cpp)
+target_link_libraries(play_sound_demo PRIVATE coretech_audio_openal)

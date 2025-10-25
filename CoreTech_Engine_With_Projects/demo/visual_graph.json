@@ -1,0 +1,46 @@
+{
+  "name": "OptimizedGraph",
+  "nodes": [
+    {
+      "id": "n_add",
+      "type": "Add",
+      "title": "Add",
+      "inputs": {
+        "A": {
+          "type": 1,
+          "f": 10.0
+        },
+        "B": {
+          "type": 1,
+          "f": 20.0
+        }
+      },
+      "outputs": {
+        "Result": {
+          "type": 1,
+          "f": 0.0
+        }
+      }
+    },
+    {
+      "id": "n_print",
+      "type": "Print",
+      "title": "Print",
+      "inputs": {
+        "Text": {
+          "type": 4,
+          "s": ""
+        }
+      },
+      "outputs": {}
+    }
+  ],
+  "links": [
+    {
+      "fromNode": "n_add",
+      "fromOutput": "Result",
+      "toNode": "n_print",
+      "toInput": "Text"
+    }
+  ]
+}

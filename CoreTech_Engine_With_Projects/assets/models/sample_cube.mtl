@@ -1,0 +1,9 @@
+
+newmtl CubeMat
+Ns 10.000
+Ka 0.200 0.200 0.200
+Kd 1.000 1.000 1.000
+Ks 0.000 0.000 0.000
+map_Kd sample_cube_albedo.bmp
+map_Bump sample_cube_normal.bmp
+map_Ka sample_cube_orm.bmp
