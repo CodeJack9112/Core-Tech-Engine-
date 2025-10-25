@@ -1,1 +1,0 @@
-CoreTech (Core Tech) sample source — provided as-is. Replace third-party components as needed.

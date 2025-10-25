@@ -298,7 +298,7 @@ void RendererDX11::updateCamera(float dt){
     m_projMat[12]=0; m_projMat[13]=0; m_projMat[14]=(-zn*zf)/(zf-zn); m_projMat[15]=0;
 }
 
-void RendererDX11::renderFrame(){
+void RendererDX11::onRender(){
     float clearColor[4] = {0.2f,0.2f,0.3f,1.0f};
     m_context->ClearRenderTargetView(m_rtv.Get(), clearColor);
 
@@ -335,7 +335,7 @@ void RendererDX11::runMainLoop(PhysicsManager* phys){
         updateCamera(1.0f/60.0f);
         checkShaderHotReload();
 
-        renderFrame();
+        onRender();
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }

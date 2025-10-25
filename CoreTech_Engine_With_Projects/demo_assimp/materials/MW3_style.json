@@ -1,6 +1,0 @@
-{
-  "name": "MW3_style",
-  "vertex_shader": "shaders/Cinematic.vert.glsl",
-  "shader": "shaders/MW3_style.frag.glsl",
-  "params": {}
-}

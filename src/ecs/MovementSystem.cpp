@@ -2,6 +2,7 @@
 #include "ecs/System.h"
 #include "ecs/TransformComponent.h"
 #include <iostream>
+#include "../include/ecs/MovementSystem.h"
 
 class MovementSystem : public System {
 public:

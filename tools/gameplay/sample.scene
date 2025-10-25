@@ -1,0 +1,3 @@
+# sample scene: name:type:x:y:z
+Player:camera:0:1.6:0
+Box:entity:2:0:4

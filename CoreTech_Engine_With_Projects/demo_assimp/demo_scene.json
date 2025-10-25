@@ -1,6 +1,0 @@
-{
-  "scene_name": "Cinematic Shader Cycle Demo",
-  "model": "../assets/CesiumMan.glb",
-  "description": "Cycles cinematic shaders on the model and attempts to save screenshots to demo_assimp/screenshots/",
-  "demo_binary": "demo_assimp/demo_shader_cycle"
-}

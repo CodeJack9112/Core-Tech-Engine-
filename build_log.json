@@ -1,0 +1,8 @@
+{
+  "cmake_stdout": "-- Configuring incomplete, errors occurred!\n",
+  "cmake_stderr": "\u001b[31mCMake Error at CMakeLists.txt:43:\n  Parse error.  Expected a command name, got unquoted argument with text\n  \"\\n\\nset\".\n\n\u001b[0m\n",
+  "build_stdout": "",
+  "build_stderr": "",
+  "cmake_return": 1,
+  "build_return": null
+}

@@ -1,220 +1,272 @@
-# --- Assistant-added dependency find/link helpers ---
-include(cmake/FetchDependencies.cmake) # FetchContent (will be skipped if prebuilt present)
 
-# Prefer prebuilt thirdparty in thirdparty/prebuilt/
-set(THIRDPARTY_PREBUILT_DIR "${CMAKE_SOURCE_DIR}/thirdparty/prebuilt")
-if(EXISTS "${THIRDPARTY_PREBUILT_DIR}")
-  message(STATUS "Using thirdparty prebuilt artifacts in ${THIRDPARTY_PREBUILT_DIR}")
-  include_directories("${THIRDPARTY_PREBUILT_DIR}/include" "${THIRDPARTY_PREBUILT_DIR}/include64")
-  link_directories("${THIRDPARTY_PREBUILT_DIR}/lib" "${THIRDPARTY_PREBUILT_DIR}/lib64")
-  # You may need to adjust target_link_libraries entries below to match your prebuilt layout.
-endif()
-
-# Try to find common packages (Assimp, SDL2, OpenAL, Bullet, OpenGL)
-find_package(assimp QUIET)
-find_package(SDL2 QUIET)
-find_package(OpenAL QUIET)
-find_package(Bullet QUIET)
-find_package(OpenGL QUIET)
-
-# Example: if found, expose variables for targets to use
-if(assimp_FOUND)
-  message(STATUS "Assimp found: ${assimp_INCLUDE_DIRS}")
-  include_directories(${assimp_INCLUDE_DIRS})
-endif()
-if(SDL2_FOUND)
-  message(STATUS "SDL2 found: ${SDL2_INCLUDE_DIRS}")
-  include_directories(${SDL2_INCLUDE_DIRS})
-  link_libraries(${SDL2_LIBRARIES})
-endif()
-# --- end assistant block ---
-
-# --- Prebuilt thirdparty detection block (added by assistant) ---
-set(THIRDPARTY_PREBUILT_DIR "${CMAKE_SOURCE_DIR}/thirdparty/prebuilt")
-if(EXISTS "${THIRDPARTY_PREBUILT_DIR}")
-  message(STATUS "Using thirdparty prebuilt artifacts in ${THIRDPARTY_PREBUILT_DIR}")
-  # Example: add a path to link directories or include directories if libs are provided.
-  # You may need to adapt these variables to match the layout of your prebuilt zips.
-  link_directories("${THIRDPARTY_PREBUILT_DIR}/lib" "${THIRDPARTY_PREBUILT_DIR}/lib64")
-  include_directories("${THIRDPARTY_PREBUILT_DIR}/include")
-endif()
-# --- end block ---
-
-include(cmake/FetchDependencies.cmake)\n\nset(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.12)
 project(CoreTechEnhanced)
 
-option(ENABLE_PROFILER "Enable profiler overlay" OFF)
-option(ENABLE_VS_ENHANCED "Enable enhanced visual scripting" ON)
+# --- Assistant-added: enforce modern C++ and include dirs for IDE friendliness ---
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+endif()
+include_directories("${CMAKE_SOURCE_DIR}/include" "${CMAKE_SOURCE_DIR}/tools/gameplay/include")
 
-file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "src/*.cpp" "src/*.c")
-if(ENABLE_VS_ENHANCED)
-  list(APPEND SRC_FILES "src/visualscripting/EnhancedVisualScripting.cpp" "src/visualscripting/Variant.cpp")
+option(FETCH_DEPS "Enable fetching external dependencies" OFF)
+if(NOT FETCH_DEPS)
+  function(FetchContent_Declare)
+endfunction()
+  function(FetchContent_MakeAvailable)
+endfunction()
 endif()
 
-add_executable(CoreTechDemo ${SRC_FILES})
-target_include_directories(CoreTechDemo PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party)
+include(cmake/FetchDependencies.cmake) # existing helper (no-op if FETCH_DEPS=OFF)
 
-# link platform libraries as needed (user should adjust)
-if (WIN32)
-  target_compile_definitions(CoreTechDemo PRIVATE PLATFORM_WINDOWS)
+# Collect all source files under src/
+file(GLOB_RECURSE ALL_SRC CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.cpp" "${CMAKE_SOURCE_DIR}/src/*.c")
+
+# Partition sources by subsystem based on path
+set(CORE_SOURCES "")
+set(RENDERER_SOURCES "")
+set(ECS_SOURCES "")
+set(PLATFORM_SOURCES "")
+set(GAMEPLAY_SOURCES "")
+set(TOOLS_SOURCES "")
+
+foreach(srcfile ${ALL_SRC})
+  string(REPLACE "\\" "/" srcfile_unix "${srcfile}")
+  if(srcfile_unix MATCHES "/src/ecs/")
+    list(APPEND ECS_SOURCES "${srcfile}")
+  elseif(srcfile_unix MATCHES "/src/Renderer/" OR srcfile_unix MATCHES "/src/GBuffer.cpp" OR srcfile_unix MATCHES "/src/Renderer.cpp" )
+    list(APPEND RENDERER_SOURCES "${srcfile}")
+  elseif(srcfile_unix MATCHES "/src/Engine/" OR srcfile_unix MATCHES "/src/core/" OR srcfile_unix MATCHES "/src/Core/")
+    list(APPEND CORE_SOURCES "${srcfile}")
+  elseif(srcfile_unix MATCHES "/src/platform/" OR srcfile_unix MATCHES "/src/Launcher" OR srcfile_unix MATCHES "/src/Launcher")
+    list(APPEND PLATFORM_SOURCES "${srcfile}")
+  elseif(srcfile_unix MATCHES "/src/gameplay/" )
+    list(APPEND GAMEPLAY_SOURCES "${srcfile}")
+  else()
+    # conservative: treat as core
+    list(APPEND CORE_SOURCES "${srcfile}")
+  endif()
+endforeach()
+
+# Create modular static libraries
+if(CORE_SOURCES)
+  add_library(core_lib STATIC ${CORE_SOURCES})
+  target_include_directories(core_lib PUBLIC "${CMAKE_SOURCE_DIR}/include")
+endif()
+if(RENDERER_SOURCES)
+  add_library(renderer_lib STATIC ${RENDERER_SOURCES})
+  target_include_directories(renderer_lib PUBLIC "${CMAKE_SOURCE_DIR}/include")
+  target_link_libraries(renderer_lib PUBLIC core_lib)
+endif()
+if(ECS_SOURCES)
+  add_library(ecs_lib STATIC ${ECS_SOURCES})
+  target_include_directories(ecs_lib PUBLIC "${CMAKE_SOURCE_DIR}/include")
+  target_link_libraries(ecs_lib PUBLIC core_lib)
+endif()
+if(PLATFORM_SOURCES)
+  add_library(platform_lib STATIC ${PLATFORM_SOURCES})
+  target_include_directories(platform_lib PUBLIC "${CMAKE_SOURCE_DIR}/include")
+  target_link_libraries(platform_lib PUBLIC core_lib renderer_lib ecs_lib)
 endif()
 
-# Linking hints (auto-detect where possible)
-find_package(OpenGL)
-if (OPENGL_FOUND)
-  target_link_libraries(CoreTechDemo PRIVATE OpenGL::GL)
-endif()
-find_package(Threads)
-if (Threads_FOUND)
-  target_link_libraries(CoreTechDemo PRIVATE Threads::Threads)
-endif()
-# ImGui single-file is compiled from third_party/imgui_single.cpp; ensure include path is set.
-
-
-# Detect Bullet headers; if missing, disable physics compilation to allow building without Bullet.
-find_path(BULLET_INCLUDE btBulletDynamicsCommon.h HINTS ${CMAKE_SOURCE_DIR}/third_party/bullet /usr/include /usr/local/include)
-if (NOT BULLET_INCLUDE)
-  message(STATUS "Bullet headers not found; disabling physics sources (DISABLE_PHYSICS=ON).")
-  set(DISABLE_PHYSICS ON)
-else()
-  message(STATUS "Bullet headers found: ${BULLET_INCLUDE}")
+# Gameplay/tools remain unbuilt as libraries, but can be added as needed
+# Create executable from src/main.cpp if present
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/main.cpp")
+  add_executable(CoreTechApp src/main.cpp)
+  # link libs if present
+  if(TARGET core_lib) target_link_libraries(CoreTechApp PRIVATE core_lib) endif()
+  if(TARGET ecs_lib) target_link_libraries(CoreTechApp PRIVATE ecs_lib) endif()
+  if(TARGET renderer_lib) target_link_libraries(CoreTechApp PRIVATE renderer_lib) endif()
+  if(TARGET platform_lib) target_link_libraries(CoreTechApp PRIVATE platform_lib) endif()
+  target_include_directories(CoreTechApp PRIVATE "${CMAKE_SOURCE_DIR}/include")
 endif()
 
-if (DISABLE_PHYSICS)
-  # remove physics-related sources to avoid compile errors without Bullet
-  list(REMOVE_ITEM SRC_FILES
-    ${CMAKE_SOURCE_DIR}/src/PhysicsManager.cpp
-    ${CMAKE_SOURCE_DIR}/src/PhysicsComponent.cpp
-    ${CMAKE_SOURCE_DIR}/src/NavMesh.cpp
-    )
-  add_definitions(-DDISABLE_PHYSICS)
+# Allow users to opt into warnings-as-errors
+option(ENABLE_WERROR "Treat warnings as errors" OFF)
+if(ENABLE_WERROR)
+  if(MSVC)
+    add_compile_options(/WX)
+  else()
+    add_compile_options(-Werror)
+  endif()
 endif()
 
-# --- Add Assimp demo target ---
-option(BUILD_ASSIMP_DEMO "Build Assimp skinned mesh importer demo" ON)
-if(BUILD_ASSIMP_DEMO)
-  add_subdirectory(demo_assimp)
-endif()
-# --- end Assimp demo block ---
+# Provide a simple Export target for downstream projects
+export(TARGETS core_lib renderer_lib ecs_lib FILE "${CMAKE_BINARY_DIR}/CoreTechTargets.cmake")
 
 
-# --- FileFormatSupport integration (added) ---
-add_library(FileFormatSupport STATIC src/FileFormatSupport.cpp)
-target_include_directories(FileFormatSupport PUBLIC ${CMAKE_SOURCE_DIR}/include)
-# Try to link with Assimp if available
-find_package(assimp QUIET)
-if(assimp_FOUND)
-  target_link_libraries(FileFormatSupport PUBLIC assimp::assimp)
+# --- Assistant-added options for optional subsystems ---
+option(ENABLE_OPENGL "Enable OpenGL renderer" OFF)
+option(ENABLE_GLFW "Enable GLFW windowing" OFF)
+option(ENABLE_BULLET "Enable Bullet physics integration" OFF)
+option(ENABLE_OPENAL "Enable OpenAL audio" OFF)
+option(ENABLE_IMGUI "Enable ImGui editor/debug UI" OFF)
+
+if(ENABLE_GLFW)
+  find_package(GLFW3 QUIET)
+  if(GLFW3_FOUND)
+    message(STATUS "GLFW found")
+    add_compile_definitions(ENABLE_GLFW=1)
+  else()
+    message(STATUS "GLFW not found; set ENABLE_GLFW=OFF or provide GLFW library")
+  endif()
 endif()
-# Add header-only or small libs via FetchContent
+
+if(ENABLE_OPENGL)
+  find_package(OpenGL REQUIRED)
+  if(OPENGL_FOUND)
+    message(STATUS "OpenGL found")
+    add_compile_definitions(ENABLE_OPENGL=1)
+  endif()
+endif()
+
+if(ENABLE_BULLET)
+  find_package(Bullet QUIET)
+  if(BULLET_FOUND)
+    message(STATUS "Bullet found")
+    add_compile_definitions(ENABLE_BULLET=1)
+  else()
+    message(STATUS "Bullet not found; physics module will be disabled")
+  endif()
+endif()
+
+if(ENABLE_OPENAL)
+  find_package(OpenAL QUIET)
+  if(OPENAL_FOUND)
+    message(STATUS "OpenAL found")
+    add_compile_definitions(ENABLE_OPENAL=1)
+  else()
+    message(STATUS "OpenAL not found; audio module will be disabled")
+  endif()
+endif()
+
+if(ENABLE_IMGUI)
+  # ImGui will be fetched if FETCH_DEPS=ON, otherwise user must supply it
+  if(FETCH_DEPS)
+    include(cmake/FetchImGui.cmake)
+  endif()
+  add_compile_definitions(ENABLE_IMGUI=1)
+endif()
+
+# Link optional libraries to renderer/platform targets if they exist
+if(TARGET renderer_lib)
+  if(ENABLE_GLFW AND GLFW3_FOUND)
+    target_link_libraries(renderer_lib PUBLIC GLFW::GLFW)
+  endif()
+  if(ENABLE_OPENGL AND OPENGL_FOUND)
+    target_link_libraries(renderer_lib PUBLIC OpenGL::GL)
+  endif()
+endif()
+
+if(TARGET platform_lib)
+  if(ENABLE_GLFW AND GLFW3_FOUND)
+    target_link_libraries(platform_lib PUBLIC GLFW::GLFW)
+  endif()
+endif()
+
+
+# If tools/renderer exists, include it into renderer_lib
+if(EXISTS "${CMAKE_SOURCE_DIR}/tools/renderer")
+  file(GLOB_RECURSE TOOLS_RENDERER_SRC CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tools/renderer/src/*.cpp" "${CMAKE_SOURCE_DIR}/tools/renderer/include/*.h")
+  if(TARGET renderer_lib)
+    target_sources(renderer_lib PRIVATE ${TOOLS_RENDERER_SRC})
+    target_include_directories(renderer_lib PUBLIC "${CMAKE_SOURCE_DIR}/tools/renderer/include")
+  endif()
+endif()
+
+
+# --- FetchContent for common deps (only when FETCH_DEPS=ON) ---
 include(FetchContent)
-FetchContent_Declare(tinyobjloader GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git GIT_TAG v2.0.0)
-FetchContent_Declare(tinygltf GIT_REPOSITORY https://github.com/syoyo/tinygltf.git GIT_TAG master)
-FetchContent_Declare(miniaudio GIT_REPOSITORY https://github.com/mackron/miniaudio.git GIT_TAG v0.12.13)
-FetchContent_Declare(stb GIT_REPOSITORY https://github.com/nothings/stb.git GIT_TAG master)
-FetchContent_MakeAvailable(tinyobjloader tinygltf miniaudio stb)
-# tinyobj provides tinyobj::tinyobj_loader_cc depending on CMake config
-if(TARGET tinyobjloader)
-  target_link_libraries(FileFormatSupport PUBLIC tinyobjloader)
-endif()
-if(TARGET tinygltf)
-  target_link_libraries(FileFormatSupport PUBLIC tinygltf)
-endif()
-if(TARGET miniaudio)
-  target_link_libraries(FileFormatSupport PUBLIC miniaudio)
-endif()
-# Expose stb include directory for stb_image.h
-if(TARGET stb)
-  target_include_directories(FileFormatSupport PUBLIC ${stb_SOURCE_DIR})
-endif()
-# --- end FileFormatSupport integration ---
+if(FETCH_DEPS)
+  message(STATUS "FETCH_DEPS=ON: attempting to download third-party dependencies")
 
-# --- ToonIntegration optional module (added) ---
-if(EXISTS "${CMAKE_SOURCE_DIR}/include/Renderer.h")
-  message(STATUS "Renderer.h detected — adding ToonIntegration module")
-  add_library(ToonIntegration STATIC src/ToonIntegration.cpp)
-  target_include_directories(ToonIntegration PUBLIC ${CMAKE_SOURCE_DIR}/include)
-  # Link to ImGui if available
-  find_package(imgui QUIET)
-  if(imgui_FOUND)
-    target_link_libraries(ToonIntegration PUBLIC imgui::imgui)
+  FetchContent_Declare(
+    glad
+    GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+    GIT_TAG master
+  )
+  FetchContent_MakeAvailable(glad)
+
+  FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG latest
+  )
+  FetchContent_MakeAvailable(glfw)
+
+  FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 0.9.9.8
+  )
+  FetchContent_MakeAvailable(glm)
+
+  FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+  )
+  FetchContent_MakeAvailable(stb)
+
+  FetchContent_Declare(
+    bullet
+    GIT_REPOSITORY https://github.com/bulletphysics/bullet3.git
+    GIT_TAG master
+  )
+  FetchContent_MakeAvailable(bullet)
+
+  FetchContent_Declare(
+    openal
+    GIT_REPOSITORY https://github.com/kcat/openal-soft.git
+    GIT_TAG master
+  )
+  FetchContent_MakeAvailable(openal)
+
+  # Link targets where appropriate if found
+  if(TARGET glad)
+    target_include_directories(renderer_lib PUBLIC ${glad_SOURCE_DIR}/include)
   endif()
-  # Link to renderer target if exists
-  if(TARGET Renderer)
-    target_link_libraries(ToonIntegration PUBLIC Renderer)
+  if(TARGET glfw)
+    target_link_libraries(renderer_lib PUBLIC glfw)
   endif()
-else()
-  message(STATUS "Renderer.h not found — ToonIntegration will be built as stub (no-op).")
-endif()
-# --- end ToonIntegration block ---
-
-
-# --- Optimization systems (added) ---
-add_library(CoreTechOptimizations STATIC
-  src/FrustumCuller.cpp
-  src/Octree.cpp
-  src/BVH.cpp
-  src/HZBOcclusion.cpp
-  src/LODManager.cpp
-  src/GPUInstancing.cpp
-  src/RenderGraph.cpp
-  src/JobSystem.cpp
-  src/ShaderCache.cpp
-  src/TextureStreaming.cpp
-  src/MeshOptimizer.cpp
-  src/OptimizationPanels.cpp
-)
-target_include_directories(CoreTechOptimizations PUBLIC ${CMAKE_SOURCE_DIR}/include)
-# Link to imgui if present (for panels)
-find_package(imgui QUIET)
-if(imgui_FOUND)
-  target_link_libraries(CoreTechOptimizations PUBLIC imgui::imgui)
-endif()
-# Link to renderer if available
-if(TARGET Renderer)
-  target_link_libraries(CoreTechOptimizations PUBLIC Renderer)
-endif()
-# --- end optimizations block ---
-
-add_subdirectory(tools)
-
-# --- QEM LOD & Editor ---
-target_sources(CoreTechOptimizations PRIVATE src/QEMSimplifier.cpp src/LODEditor.cpp src/LODGenerator.cpp)
-target_include_directories(CoreTechOptimizations PRIVATE ${CMAKE_SOURCE_DIR}/include)
-add_subdirectory(tools)
-
-# QEM optimized and LOD runtime
-target_sources(CoreTechOptimizations PRIVATE src/QEMOptimized.cpp src/LODRuntime.cpp src/LODRuntime.cpp src/QEMSimplifier.cpp src/LODEditor.cpp)
-
-
-# --- Assistant-added OpenGL/GLFW link block ---
-find_package(OpenGL REQUIRED)
-find_package(glfw3 3.3 REQUIRED)
-
-if(TARGET CoreTechDemo)
-    target_link_libraries(CoreTechDemo PRIVATE glfw OpenGL::GL)
-endif()
-if(TARGET CoreTechOptimizations)
-    target_link_libraries(CoreTechOptimizations PRIVATE glfw OpenGL::GL)
-endif()
-# --- end OpenGL/GLFW block ---
-
-
-# Add GLAD download and library
-add_subdirectory(thirdparty/glad)
-
-if(TARGET CoreTechDemo)
-  target_link_libraries(CoreTechDemo PRIVATE coretech_glad)
+  if(TARGET glm)
+    target_include_directories(renderer_lib PUBLIC ${glm_SOURCE_DIR})
+  endif()
 endif()
 
-# --- Assistant-added Assimp & stb_image support ---
-add_subdirectory(thirdparty/stb_image)
-if(TARGET CoreTechDemo)
-    target_link_libraries(CoreTechDemo PRIVATE assimp::assimp coretech_stb_image)
+
+# Fetch Catch2 for tests when FETCH_DEPS=ON
+if(FETCH_DEPS)
+  FetchContent_Declare(
+    catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v2.13.7
+  )
+  FetchContent_MakeAvailable(catch2)
 endif()
-if(TARGET CoreTechOptimizations)
-    target_link_libraries(CoreTechOptimizations PRIVATE assimp::assimp coretech_stb_image)
+
+# Add tests target
+enable_testing()
+file(GLOB_RECURSE TEST_SRC CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tests/*.cpp")
+add_executable(engine_tests ${TEST_SRC})
+target_include_directories(engine_tests PRIVATE "${CMAKE_SOURCE_DIR}/include")
+if(TARGET core_lib) target_link_libraries(engine_tests PRIVATE core_lib) endif()
+if(TARGET renderer_lib) target_link_libraries(engine_tests PRIVATE renderer_lib) endif()
+if(TARGET ecs_lib) target_link_libraries(engine_tests PRIVATE ecs_lib) endif()
+if(TARGET catch2) target_link_libraries(engine_tests PRIVATE Catch2::Catch2) endif()
+add_test(NAME engine_tests COMMAND engine_tests)
+
+option(ENABLE_VULKAN "Enable Vulkan renderer" OFF)
+if(ENABLE_VULKAN)
+  add_compile_definitions(ENABLE_VULKAN=1)
 endif()
-# --- end Assimp/stb_image block ---
+
+
+# Quick tests target (no external deps)
+file(GLOB QUICK_TEST_SRC CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tests/quick_tests.cpp")
+add_executable(quick_tests ${QUICK_TEST_SRC})
+target_include_directories(quick_tests PRIVATE "${CMAKE_SOURCE_DIR}/include")
+if(TARGET core_lib) target_link_libraries(quick_tests PRIVATE core_lib) endif()
+if(TARGET renderer_lib) target_link_libraries(quick_tests PRIVATE renderer_lib) endif()
+if(TARGET ecs_lib) target_link_libraries(quick_tests PRIVATE ecs_lib) endif()

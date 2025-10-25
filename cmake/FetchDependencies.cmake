@@ -1,3 +1,6 @@
+option(FETCH_DEPS "Enable fetching external dependencies" OFF)
+
+if(FETCH_DEPS)
 include(FetchContent)
 
 # Set defaults to prevent interactive prompts
@@ -59,3 +62,7 @@ FetchContent_Declare(
   GIT_TAG        v3.24
 )
 FetchContent_MakeAvailable(openal)
+
+else()
+  message(STATUS "FETCH_DEPS is OFF; skipping external dependency fetch. Use -DFETCH_DEPS=ON to enable network fetch.")
+endif()

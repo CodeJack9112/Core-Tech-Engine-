@@ -1,6 +1,0 @@
-{
-  "name": "MW2_style",
-  "vertex_shader": "shaders/Cinematic.vert.glsl",
-  "shader": "shaders/MW2_style.frag.glsl",
-  "params": {}
-}

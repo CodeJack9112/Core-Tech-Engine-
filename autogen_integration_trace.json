@@ -1,0 +1,12 @@
+{
+  "detected_library_files_count": 0,
+  "sample_library_files": [],
+  "detected_targets_in_cmake": [
+    "CoreTechDemo",
+    "CoreTechOptimizations",
+    "FileFormatSupport",
+    "ToonIntegration"
+  ],
+  "added_fetchcontent_snippet_present": true,
+  "cbp_updated_with_libs": true
+}
