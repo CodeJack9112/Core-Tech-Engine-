@@ -1,0 +1,6 @@
+{
+  "name": "MW1_style",
+  "vertex_shader": "shaders/Cinematic.vert.glsl",
+  "shader": "shaders/MW1_style.frag.glsl",
+  "params": {}
+}

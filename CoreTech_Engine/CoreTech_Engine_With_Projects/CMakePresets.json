@@ -1,0 +1,63 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 19,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "Default Configure (Debug)",
+      "description": "Configure for default generator (Ninja if available) in Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CT_ENABLE_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release Configure",
+      "description": "Configure Release build",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CT_ENABLE_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "msvc-x64",
+      "displayName": "MSVC x64 (Release)",
+      "description": "Configure Visual Studio generator for x64 Release",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "architecture": "x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "targets": [],
+      "configuration": "Debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "targets": [],
+      "configuration": "Release"
+    },
+    {
+      "name": "msvc-x64",
+      "configurePreset": "msvc-x64",
+      "targets": [],
+      "configuration": "Release"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "CelMaterial",
+  "shader": "shaders/CelShade.frag.glsl",
+  "vertex_shader": "shaders/CelShade.vert.glsl",
+  "params": {
+    "uLevels": 3.0,
+    "uBaseColor": [
+      0.8,
+      0.6,
+      0.3
+    ],
+    "uLightDir": [
+      0.5,
+      -1.0,
+      0.2
+    ],
+    "uLightColor": [
+      1.0,
+      1.0,
+      1.0
+    ]
+  }
+}

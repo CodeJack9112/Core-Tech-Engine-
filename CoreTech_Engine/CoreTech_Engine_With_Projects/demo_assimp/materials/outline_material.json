@@ -1,0 +1,14 @@
+{
+  "name": "OutlineMaterial",
+  "shader": "shaders/Outline.frag.glsl",
+  "vertex_shader": "shaders/OutlineExtrude.vert.glsl",
+  "params": {
+    "uOutlineScale": 0.03,
+    "uOutlineColor": [
+      0,
+      0,
+      0,
+      1
+    ]
+  }
+}
